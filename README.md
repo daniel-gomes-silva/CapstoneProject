@@ -5,12 +5,12 @@ The **aim** is to improve the current implementation of the RAPTOR algorithm by 
 
 ## Footpath Duration Calculation
 
-This project contains two C++ programs designed to calculate footpath durations between public transport stops (Metro and STCP) in Porto using the OSRM (Open Source Routing Machine) API. One version is **sequential** `footpathDuration.cpp`, and the other `footpathDurationOMP.cpp` leverages OpenMP for **parallel** processing to improve performance. Additionally, there is a `footpathDistance.cpp` program for calculating footpath distances.
+This project contains two C++ programs designed to calculate footpath durations between public transport stops (Metro and STCP) in Porto using the OSRM (Open Source Routing Machine) API. One version is **sequential** `footpathDuration.cpp`, and the other `footpathDurationOMP.cpp` leverages OpenMP for **parallel** processing to improve performance.
 
 ### Introduction
 
 These programs interact with a local **OSRM server to retrieve walking durations** between various public transport stops. The **goal** is to **create a comprehensive dataset of footpath travel times**, which can be valuable for transport planning and analysis. Additionally, the project includes tools to load this generated data into a **Redis cache**, enabling fast and efficient lookups for use in other applications.  
-Currently, there are `85 Metro stops` and `2504 STCP stops`, resulting in a total of 2589 stops and 2589*(2588/2) = `3350166 unique pairs`. The sequential version processes requests one by one, while the parallel version uses OpenMP to send multiple requests concurrently, significantly reducing execution time for large datasets.
+Currently, there are **85 Metro stops** and **2504 STCP stops**, resulting in a total of 2589 stops and 2589*(2588/2) = **3350166 unique pairs**. The sequential version processes requests one by one, while the parallel version uses OpenMP to send multiple requests concurrently, significantly reducing execution time for large datasets.
 
 ### How it Works (General)
 
@@ -106,24 +106,23 @@ clang++ footpathDurationOMP.cpp -lcurl -Xpreprocessor -fopenmp -lomp -L/opt/home
 
 **Code Explanation**
 
-The majority of the code is `identical to the sequential version`. The key differences are in the `main` function, specifically how API requests are managed and executed
+The majority of the code is **identical to the sequential version**. The key differences are in the `main` function, specifically how API requests are managed and executed
 
-- `Request Struct`: A new struct `Request` is introduced to encapsulate the parameters for each OSRM API call: `sourceIndex`, `destStart`, and `destEnd`. This makes it easier to manage individual tasks for parallel execution
+- **`Request Struct`**: A new struct `Request` is introduced to encapsulate the parameters for each OSRM API call: `sourceIndex`, `destStart`, and `destEnd`. This makes it easier to manage individual tasks for parallel execution
 
-- `Request Batching`: Instead of immediately making API calls in nested loops, this version first populates a `std::vector<Request> requests` with all the individual OSRM API requests that need to be made. This pre-computation allows OpenMP to effectively schedule these independent tasks
+- **`Request Batching`**: Instead of immediately making API calls in nested loops, this version first populates a `std::vector<Request> requests` with all the individual OSRM API requests that need to be made. This pre-computation allows OpenMP to effectively schedule these independent tasks
 
-- `#pragma omp parallel for schedule(dynamic)`: This is the core OpenMP directive that enables parallel execution
+- **`#pragma omp parallel for schedule(dynamic)`**: This is the core OpenMP directive that enables parallel execution
     - `#pragma omp parallel for` tells the compiler to parallelize the for loop that follows. Each iteration of this loop (representing an OSRM API request) can potentially be run by a different thread
     - `schedule(dynamic)` this clause specifies how iterations are assigned to threads. `dynamic` scheduling means that chunks of iterations are assigned to threads as they become available. This is often good for loops where the workload for each iteration might vary (e.g., due to network latency in API calls), helping to balance the load among threads
 
-- `#pragma omp critical`: The section of code where results are written to the `outFile` and shared counters (like `totalStopPairs`, `totalRequests`, `failedRequests`) are updated is enclosed within a `#pragma omp critical` block
+- **`#pragma omp critical`**: The section of code where results are written to the `outFile` and shared counters (like `totalStopPairs`, `totalRequests`, `failedRequests`) are updated is enclosed within a `#pragma omp critical` block
     - This is crucial for thread safety. When multiple threads try to write to the same file or update shared variables simultaneously, it can lead to data corruption or race conditions
     - The `critical` directive ensures that only one thread can execute the code within that block at any given time, preventing conflicts
 
 **How Parallelism Helps**
 
-By using `omp parallel for`, multiple HTTP requests to the OSRM server can be made concurrently. While one thread is waiting for the OSRM server to respond to its request, other threads can be sending their own requests or processing their responses. This significantly reduces the total wall-clock time required to fetch all durations, especially when dealing with a large number of stops and network latency is a factor.  
-For instance, the **sequential version** (`footpathDuration.cpp`) takes approximately **27 minutes** to complete, whereas the **parallel version** (`footpathDurationOMP.cpp`) finishes in less than **10 minutes** when calculating all **3350166 unique pairs** from the **2589 stops**.
+By using `omp parallel for`, multiple HTTP requests to the OSRM server can be made concurrently. While one thread is waiting for the OSRM server to respond to its request, other threads can be sending their own requests or processing their responses. This significantly reduces the total wall-clock time required to fetch all durations, especially when dealing with a large number of stops and network latency is a factor. For instance, the **sequential version** (`footpathDuration.cpp`) takes approximately **27 minutes** to complete, whereas the **parallel version** (`footpathDurationOMP.cpp`) finishes in less than **10 minutes** when calculating all **3350166 unique pairs** from the **2589 stops**.
 
 ### Output 
 
@@ -168,7 +167,7 @@ g++ redis.cpp -lhiredis -o redis && ./redis
 - **Data Processing**:
     - Opens the specified CSV file (e.g., `foot_durations.csv`)
     - Reads the CSV file line by line. For each line, it parses the `stop_id1`, `stop_id2`, and the `duration` (or `distance`) value
-- `makeKey` **Function**
+- **`makeKey` Function**
     - A crucial helper function that creates a canonical key for each pair of stops. It ensures that the key for `(stopA, stopB)` is identical to the key for `(stopB, stopA)` by always placing the lexicographically smaller ID first
     - For example, `makeKey("BAR2", "5697")` and `makeKey("5697", "BAR2")` both produce the key `"5697:BAR2"`. This prevents duplicate entries and simplifies lookups
 - **Redis `SET` Command**:
@@ -206,7 +205,8 @@ This program is very similar to `footpathDuration.cpp` but calculates walking di
 
 ## Usage with RAPTOR Algorithm
 
-It's important to note that while `footpathDistance.cpp` provides distances, the output of `footpathDuration.cpp` (i.e., walking durations) is typically used by routing algorithms like [RAPTOR](https://github.com/daniel-gomes-silva/RAPTOR) (Rapid Transit Optimized Routing). RAPTOR primarily focuses on minimizing travel time, which includes walking durations between public transport stops and transfers.
+It's important to note that while `footpathDistance.cpp` provides distances, the output of `footpathDuration.cpp` (i.e., walking durations) is typically used by routing algorithms like [RAPTOR](https://github.com/daniel-gomes-silva/RAPTOR) (Rapid Transit Optimized Routing). RAPTOR primarily focuses on minimizing travel time, which includes walking durations between public transport stops and transfers.  
+Although RAPTOR can alternatively use distance data from `footpathDistance.cpp` and apply a predefined constant average walking speed to estimate durations, the durations obtained directly from OSRM through `footpathDuration.cpp` should be more accurate.
 
 <br>
 

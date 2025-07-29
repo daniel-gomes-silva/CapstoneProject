@@ -181,6 +181,10 @@ This is a simple client program that demonstrates how to retrieve a single footp
 ```bash
 g++ redisQueryExample.cpp -lhiredis -o redisQuery && ./redisQuery
 ```
+```bash
+Connected to Redis
+Duration between BAR2 and 5697: 9905.7
+```
 
 **Code Explanation**
 
@@ -199,6 +203,9 @@ You can also query the cached data directly using `redis-cli`
 
 ```bash
 redis-cli GET 5697:BAR2
+```
+```bash
+"9905.7"
 ```
 
 ## Footpath Distance Calculation: `footpathDistance.cpp`

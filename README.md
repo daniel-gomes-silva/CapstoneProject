@@ -1,11 +1,16 @@
+# Capstone Project
+
+A [prototype solution](https://github.com/daniel-gomes-silva/RAPTOR) for public transport trip planning from the passenger's perspective has been implemented, based on the RAPTOR algorithm. However, some routes may consider connections (transfers) through walking paths that are currently calculated using simple metrics such as Manhattan distance. These metrics **do not consider the actual paths** (streets, avenues, etc.) of an urban network, so distances and **travel times may deviate significantly** from the real world.  
+The **aim** is to improve the current implementation of the RAPTOR algorithm by **integrating an efficient algorithm and data structure that allows for (pre-)calculating the best walking paths between two points of the calculated routes**, which is the objective of this project. These points can be geographic coordinates (latitude, longitude) defined by the passenger, or previously defined points of interest (e.g., bus or metro stops).
+
 ## Footpath Duration Calculation
 
 This project contains two C++ programs designed to calculate footpath durations between public transport stops (Metro and STCP) in Porto using the OSRM (Open Source Routing Machine) API. One version is **sequential** `footpathDuration.cpp`, and the other `footpathDurationOMP.cpp` leverages OpenMP for **parallel** processing to improve performance. Additionally, there is a `footpathDistance.cpp` program for calculating footpath distances.
 
 ### Introduction
 
-These programs interact with a local OSRM server to retrieve walking durations between various public transport stops. The goal is to create a comprehensive dataset of footpath travel times, which can be valuable for transport planning and analysis. Currently, there are `85 Metro stops` and `2504 STCP stops`, resulting in a total of 2589 stops and 2589*(2588/2) = `3350166 unique pairs`.
-The sequential version processes requests one by one, while the parallel version uses OpenMP to send multiple requests concurrently, significantly reducing execution time for large datasets.
+These programs interact with a local **OSRM server to retrieve walking durations** between various public transport stops. The **goal** is to **create a comprehensive dataset of footpath travel times**, which can be valuable for transport planning and analysis. Additionally, the project includes tools to load this generated data into a **Redis cache**, enabling fast and efficient lookups for use in other applications.  
+Currently, there are `85 Metro stops` and `2504 STCP stops`, resulting in a total of 2589 stops and 2589*(2588/2) = `3350166 unique pairs`. The sequential version processes requests one by one, while the parallel version uses OpenMP to send multiple requests concurrently, significantly reducing execution time for large datasets.
 
 ### How it Works (General)
 
@@ -20,7 +25,7 @@ The sequential version processes requests one by one, while the parallel version
 
 4. **Response Parsing**: The JSON response from OSRM, containing the calculated durations, is parsed
 
-5. **Data Storage**: The extracted durations, along with the corresponding stop IDs, are written to a CSV file
+5. **Data Storage**: The extracted durations and stop IDs are first written to a CSV file. This data can then be loaded into a Redis database using the provided `redis.cpp` program, creating a fast (and persistent) cache for quick queries by other services or applications
 
 6. **Parallelism (OpenMP version)**: The process of sending and receiving API requests is parallelized using OpenMP directives, allowing multiple requests to be handled concurrently by different threads, significantly speeding up the overall process
 
@@ -39,6 +44,11 @@ The programs expect the OSRM server to be running locally at `http://127.0.0.1:5
     - `./datasets/Porto/metro/GTFS/stops.txt`
     - `./datasets/Porto/stcp/GTFS/stops.txt`  
     These files should contain stop information in GTFS format, specifically with `stop_id`, `stop_lat`, and `stop_lon`
+
+5. **Redis and hiredis** (required for `redis.cpp` and `redisQueryExample.cpp`):
+    - **Redis Server**: An instance of Redis running at the default address `127.0.0.1:6379`
+    - **hiredis**: The official C client library for Redis
+        - On macOS (via Homebrew): `brew install redis hiredis`
 
 ### Sequential Version: `footpathDuration.cpp`
 
@@ -70,8 +80,6 @@ g++ footpathDuration.cpp -lcurl -o footpathDuration && ./footpathDuration
     - Calls `getDurationsFromSource` to get durations for the current batch
     - Writes the `source_id,destination_id,duration` to the output (e.g., `foot_durations.csv`) CSV file. If a route is not found, `-1` is written
 
-
-
 ### Parallel Version: `footpathDurationOMP.cpp`
 
 **Compilation && Execution**
@@ -98,7 +106,7 @@ clang++ footpathDurationOMP.cpp -lcurl -Xpreprocessor -fopenmp -lomp -L/opt/home
 
 **Code Explanation**
 
-The majority of the code is `identical to the sequential version`. The key differences are in the `main` function, specifically how API requests are managed and executed.
+The majority of the code is `identical to the sequential version`. The key differences are in the `main` function, specifically how API requests are managed and executed
 
 - `Request Struct`: A new struct `Request` is introduced to encapsulate the parameters for each OSRM API call: `sourceIndex`, `destStart`, and `destEnd`. This makes it easier to manage individual tasks for parallel execution
 
@@ -112,11 +120,10 @@ The majority of the code is `identical to the sequential version`. The key diffe
     - This is crucial for thread safety. When multiple threads try to write to the same file or update shared variables simultaneously, it can lead to data corruption or race conditions
     - The `critical` directive ensures that only one thread can execute the code within that block at any given time, preventing conflicts
 
-
 **How Parallelism Helps**
 
 By using `omp parallel for`, multiple HTTP requests to the OSRM server can be made concurrently. While one thread is waiting for the OSRM server to respond to its request, other threads can be sending their own requests or processing their responses. This significantly reduces the total wall-clock time required to fetch all durations, especially when dealing with a large number of stops and network latency is a factor.  
-For instance, the **sequential version** (`footpathDuration.cpp`) takes approximately **27 minutes** to complete, whereas the **parallel version** (`footpathDurationOMP.cpp`) finishes in about **10 minutes** when calculating all **3350166 unique pairs** from the **2589 stops**.
+For instance, the **sequential version** (`footpathDuration.cpp`) takes approximately **27 minutes** to complete, whereas the **parallel version** (`footpathDurationOMP.cpp`) finishes in less than **10 minutes** when calculating all **3350166 unique pairs** from the **2589 stops**.
 
 ### Output 
 
@@ -129,6 +136,7 @@ R52,CAVE4,10908.7
 R52,MCBL1,9583.3
 R52,SBNT3,9639.5
 R52,SCAL4,10409.9
+...
 ```
 
 Where:
@@ -138,16 +146,65 @@ Where:
 
 Console output will include information about loaded stops, progress of API requests, and final statistics on total pairs processed, total API requests made, failed requests, and total execution time.
 
-### Footpath Distance Calculation: `footpathDistance.cpp`
+## Redis Integration for Caching
 
-This program is very similar to footpathDuration.cpp but calculates walking distances instead of durations.
+Once the footpath data is generated, it can be useful to store it in a fast, persistent cache for quick lookups by other applications or services. The following programs use [Redis](https://redis.io), an in-memory data store, for this purpose. This approach avoids the need to repeatedly read and parse the large CSV file
+
+#### Caching Footpath Data: `redis.cpp`  
+This program reads the generated CSV file `foot_durations.csv` (or `foot_distances.csv`) and loads its contents into a Redis database for fast and efficient access.
+
+**Compilation && Execution**  
+First, ensure you have a Redis server running
+```bash
+redis-server
+```
+Then, compile and run the program
+```bash
+g++ redis.cpp -lhiredis -o redis && ./redis
+```
+
+**Code Explanation**
+- **Redis Connection**: It uses the `hiredis` library to connect to a local Redis server at the default address `127.0.0.1:6379`
+- **Data Processing**:
+    - Opens the specified CSV file (e.g., `foot_durations.csv`)
+    - Reads the CSV file line by line. For each line, it parses the `stop_id1`, `stop_id2`, and the `duration` (or `distance`) value
+- `makeKey` **Function**
+    - A crucial helper function that creates a canonical key for each pair of stops. It ensures that the key for `(stopA, stopB)` is identical to the key for `(stopB, stopA)` by always placing the lexicographically smaller ID first
+    - For example, `makeKey("BAR2", "5697")` and `makeKey("5697", "BAR2")` both produce the key `"5697:BAR2"`. This prevents duplicate entries and simplifies lookups
+- **Redis `SET` Command**:
+    - For each valid row in the CSV, it executes a Redis `SET` command
+    - `redisCommand(redisContext, "SET %s %s", key.c_str(), duration.c_str())` stores the duration/distance as a value associated with the generated key
+
+#### Querying Cached Data: `redisQueryExample.cpp`  
+This is a simple client program that demonstrates how to retrieve a single footpath duration/distance from the Redis cache using a key
+
+**Compilation && Execution**  
+```bash
+g++ redisQueryExample.cpp -lhiredis -o redisQuery && ./redisQuery
+```
+
+**Code Explanation**
+
+- **Connection and Key Generation**: Similar to `redis.cpp`, it connects to the local Redis server
+    - It uses the **exact same** `makeKey` function to generate the key for the two hardcoded stop IDs (`stop_id1 = "BAR2"`, `stop_id2 = "5697"`). This is essential to ensure it can find the data stored by `redis.cpp`
+
+- **Redis `GET` Command**: It uses the `redisCommand(redisContext, "GET %s", key.c_str())` function to send a `GET` request to Redis to fetch the value associated with the generated key
+
+- **Handling the Reply**: The program checks the type of the `reply` from Redis
+    - If the reply is of type `REDIS_REPLY_STRING`, it means the key was found, and the program prints the corresponding distance/duration
+    - If the key does not exist or another error occurs, it prints a message indicating that no data was found for the given stops
+- **Resource Management**: It properly frees the reply object (`freeReplyObject`) and the Redis connection context (`redisFree`) to prevent memory leaks
+
+## Footpath Distance Calculation: `footpathDistance.cpp`
+
+This program is very similar to `footpathDuration.cpp` but calculates walking distances instead of durations
 
 **Key Differences from `footpathDuration.cpp`**
 - **API Request URL**: The primary difference is in the OSRM API request URL within the `getDistancesFromSource` function. It includes the `&annotations=distance` parameter to specifically request distances from the OSRM `table` service
     - `http://127.0.0.1:5001/table/v1/walking/<coordinates>?sources=0&destinations=<destinations_param>&annotations=distance`
 - **Output File**: The output CSV file will be named `foot_distances.csv` and will contain distance instead of duration
 
-### Usage with RAPTOR Algorithm
+## Usage with RAPTOR Algorithm
 
 It's important to note that while `footpathDistance.cpp` provides distances, the output of `footpathDuration.cpp` (i.e., walking durations) is typically used by routing algorithms like [RAPTOR](https://github.com/daniel-gomes-silva/RAPTOR) (Rapid Transit Optimized Routing). RAPTOR primarily focuses on minimizing travel time, which includes walking durations between public transport stops and transfers.
 

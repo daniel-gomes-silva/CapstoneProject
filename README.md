@@ -194,6 +194,13 @@ g++ redisQueryExample.cpp -lhiredis -o redisQuery && ./redisQuery
     - If the key does not exist or another error occurs, it prints a message indicating that no data was found for the given stops
 - **Resource Management**: It properly frees the reply object (`freeReplyObject`) and the Redis connection context (`redisFree`) to prevent memory leaks
 
+**Alternative: Command Line Query**  
+You can also query the cached data directly using `redis-cli`
+
+```bash
+redis-cli GET 5697:BAR2
+```
+
 ## Footpath Distance Calculation: `footpathDistance.cpp`
 
 This program is very similar to `footpathDuration.cpp` but calculates walking distances instead of durations

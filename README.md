@@ -3,6 +3,24 @@
 A [prototype solution](https://github.com/daniel-gomes-silva/RAPTOR) for public transport trip planning from the passenger's perspective has been implemented, based on the RAPTOR algorithm. However, some routes may consider connections (transfers) through walking paths that are currently calculated using simple metrics such as Manhattan distance. These metrics **do not consider the actual paths** (streets, avenues, etc.) of an urban network, so distances and **travel times may deviate significantly** from the real world.  
 The **aim** is to improve the current implementation of the RAPTOR algorithm by **integrating an efficient algorithm and data structure that allows for (pre-)calculating the best walking paths between two points of the calculated routes**, which is the objective of this project. These points can be geographic coordinates (latitude, longitude) defined by the passenger, or previously defined points of interest (e.g., bus or metro stops).
 
+## Table of Contents
+
+- [Footpath Duration Calculation](#footpath-duration-calculation)
+  - [Introduction](#introduction)
+  - [How it Works (General)](#how-it-works-general)
+  - [Prerequisites](#prerequisites)
+  - [Sequential Version: footpathDuration.cpp](#sequential-version-footpathdurationcpp)
+  - [Parallel Version: footpathDurationOMP.cpp](#parallel-version-footpathdurationompcpp)
+  - [Output](#output)
+- [Redis Integration for Caching](#redis-integration-for-caching)
+  - [Prerequisites](#prerequisites-1)
+  - [Caching Footpath Data: redis.cpp](#caching-footpath-data-rediscpp)
+  - [Querying Cached Data: redisQueryExample.cpp](#querying-cached-data-redisqueryexamplecpp)
+- [Footpath Distance Calculation: footpathDistance.cpp](#footpath-distance-calculation-footpathdistancecpp)
+- [Usage with RAPTOR Algorithm](#usage-with-raptor-algorithm)
+- [Open Source Routing Machine](#open-source-routing-machine)
+  - [Using Docker](#using-docker)
+
 ## Footpath Duration Calculation
 
 This project contains two C++ programs designed to calculate footpath durations between public transport stops (Metro and STCP) in Porto using the OSRM (Open Source Routing Machine) API. One version is **sequential** `footpathDuration.cpp`, and the other `footpathDurationOMP.cpp` leverages OpenMP for **parallel** processing to improve performance.
@@ -44,11 +62,6 @@ The programs expect the OSRM server to be running locally at `http://127.0.0.1:5
     - `./datasets/Porto/metro/GTFS/stops.txt`
     - `./datasets/Porto/stcp/GTFS/stops.txt`  
     These files should contain stop information in GTFS format, specifically with `stop_id`, `stop_lat`, and `stop_lon`
-
-5. **Redis and hiredis** (required for `redis.cpp` and `redisQueryExample.cpp`):
-    - **Redis Server**: An instance of Redis running at the default address `127.0.0.1:6379`
-    - **hiredis**: The official C client library for Redis
-        - On macOS (via Homebrew): `brew install redis hiredis`
 
 ### Sequential Version: `footpathDuration.cpp`
 
@@ -149,7 +162,16 @@ Console output will include information about loaded stops, progress of API requ
 
 Once the footpath data is generated, it can be useful to store it in a fast, persistent cache for quick lookups by other applications or services. The following programs use [Redis](https://redis.io), an in-memory data store, for this purpose. This approach avoids the need to repeatedly read and parse the large CSV file
 
-#### Caching Footpath Data: `redis.cpp`  
+### Prerequisites
+
+1. **Redis and hiredis** (required for `redis.cpp` and `redisQueryExample.cpp`):
+    - **Redis Server**: An instance of Redis running at the default address `127.0.0.1:6379`
+    - **hiredis**: The official C client library for Redis
+        - On macOS (via Homebrew): `brew install redis hiredis`
+2. **Generated CSV Data**: `foot_durations.csv` (or `foot_distances.csv`): 
+    - This file must be generated first by running either the sequential (`footpathDuration.cpp`) or parallel (`footpathDurationOMP.cpp`) version described in the previous section. The CSV contains the walking durations/distances between all stop pairs that will be cached in Redis
+
+### Caching Footpath Data: `redis.cpp`  
 This program reads the generated CSV file `foot_durations.csv` (or `foot_distances.csv`) and loads its contents into a Redis database for fast and efficient access.
 
 **Compilation && Execution**  
@@ -174,7 +196,7 @@ g++ redis.cpp -lhiredis -o redis && ./redis
     - For each valid row in the CSV, it executes a Redis `SET` command
     - `redisCommand(redisContext, "SET %s %s", key.c_str(), duration.c_str())` stores the duration/distance as a value associated with the generated key
 
-#### Querying Cached Data: `redisQueryExample.cpp`  
+### Querying Cached Data: `redisQueryExample.cpp`  
 This is a simple client program that demonstrates how to retrieve a single footpath duration/distance from the Redis cache using a key
 
 **Compilation && Execution**  

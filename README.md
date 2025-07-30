@@ -222,12 +222,28 @@ Duration between BAR2 and 5697: 9905.7
 
 **Alternative: Command Line Query**  
 You can also query the cached data directly using `redis-cli`
-
 ```bash
-redis-cli GET 5697:BAR2
+redis-cli GET "5697:BAR2"
 ```
 ```bash
 "9905.7"
+```
+
+Check total number of cached entries
+```bash
+redis-cli DBSIZE
+```
+```bash
+(integer) 3350166
+```
+
+Other useful commands:
+```bash
+# Search for keys containing a specific stop ID
+redis-cli KEYS "*5697*"
+
+# Check if Redis is running
+redis-cli ping
 ```
 
 ## Footpath Distance Calculation: `footpathDistance.cpp`

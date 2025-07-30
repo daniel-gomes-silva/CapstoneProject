@@ -242,9 +242,8 @@ This program is very similar to `footpathDuration.cpp` but calculates walking di
 ## Usage with RAPTOR Algorithm
 
 It's important to note that while `footpathDistance.cpp` provides distances, the output of `footpathDuration.cpp` (i.e., walking durations) is typically used by routing algorithms like [RAPTOR](https://github.com/daniel-gomes-silva/RAPTOR) (Rapid Transit Optimized Routing). RAPTOR primarily focuses on minimizing travel time, which includes walking durations between public transport stops and transfers.  
-Although RAPTOR can alternatively use distance data from `footpathDistance.cpp` and apply a predefined constant average walking speed to estimate durations, the durations obtained directly from OSRM through `footpathDuration.cpp` should be more accurate.
-
-<br>
+Although RAPTOR can alternatively use distance data from `footpathDistance.cpp` and apply a predefined constant average walking speed to estimate durations, the durations obtained directly from OSRM through `footpathDuration.cpp` should be more accurate.  
+**My contributions to the RAPTOR algorithm implementation can be found [here](https://github.com/daniel-gomes-silva/RAPTOR).**
 
 ## Open Source Routing Machine
 

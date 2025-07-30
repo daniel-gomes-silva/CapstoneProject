@@ -23,7 +23,7 @@ The **aim** is to improve the current implementation of the RAPTOR algorithm by 
 
 ## Footpath Duration Calculation
 
-This project contains two C++ programs designed to calculate footpath durations between public transport stops (Metro and STCP) in Porto using the OSRM (Open Source Routing Machine) API. One version is **sequential** `footpathDuration.cpp`, and the other `footpathDurationOMP.cpp` leverages OpenMP for **parallel** processing to improve performance.
+This project contains two C++ programs designed to calculate footpath durations between public transport stops (Metro and STCP) in Porto using the [OSRM](#open-source-routing-machine) (Open Source Routing Machine) API. One version is **sequential** `footpathDuration.cpp`, and the other `footpathDurationOMP.cpp` leverages OpenMP for **parallel** processing to improve performance.
 
 ### Introduction
 
@@ -80,7 +80,7 @@ g++ footpathDuration.cpp -lcurl -o footpathDuration && ./footpathDuration
     - **Core function** for making OSRM API calls that takes a vector of (all) `Stop` objects, the `sourceIndex` of the origin stop, and a range of destination indices (`destStart` to `destEnd`)
     - **Coordinates String Construction**: It builds a string of coordinates in `longitude,latitude;longitude,latitude...` format, starting with the source and then all specified destinations
     - **Destinations String Construction**: Generates a string of destinations in the format required by OSRM (e.g., "1;2;3" for three destinations) calling `createDestinationsParam(int numCoordinates)`
-    - **OSRM URL Construction**: It constructs the OSRM `table` service URL:  
+    - **OSRM URL Construction**: It constructs the OSRM [`table`](https://github.com/Project-OSRM/osrm-backend/blob/master/docs/http.md#table-service) service URL:  
     `http://127.0.0.1:5001/table/v1/walking/<coordinates>?sources=0&destinations=<destinations_param>`
         - `sources=0` indicates that the first coordinate in the coordinates string is the source
         - `destinations` specifies which of the subsequent coordinates are targets

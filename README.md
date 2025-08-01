@@ -58,10 +58,13 @@ The programs expect the OSRM server to be running locally at `http://127.0.0.1:5
 3. **json.hpp**: A single-header JSON library
     - You'll need to place `json.hpp` in your include path or the same directory as the source files
 
-4. **GTFS files** (`stops.txt`):
+4. **GTFS files**:
     - `./datasets/Porto/metro/GTFS/stops.txt`
     - `./datasets/Porto/stcp/GTFS/stops.txt`  
     These files should contain stop information in GTFS format, specifically with `stop_id`, `stop_lat`, and `stop_lon`
+    - **Download the latest GTFS files:**
+        - [Metro do Porto GTFS](https://opendata.porto.digital/dataset/horarios-paragens-e-rotas-em-formato-gtfs)
+        - [STCP GTFS](https://opendata.porto.digital/dataset/horarios-paragens-e-rotas-em-formato-gtfs-stcp)
 
 ### Sequential Version: `footpathDuration.cpp`
 

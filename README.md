@@ -55,7 +55,7 @@ The programs expect the OSRM server to be running locally at `http://127.0.0.1:5
 2. **libcurl**: A library for making HTTP requests
     - On macOS (via Homebrew): `brew install curl`
 
-3. **json.hpp**: A single-header JSON library
+3. **json.hpp**: A single-header [JSON library](https://github.com/nlohmann/json)
     - You'll need to place `json.hpp` in your include path or the same directory as the source files
 
 4. **GTFS files**:
@@ -88,7 +88,7 @@ g++ footpathDuration.cpp -lcurl -o footpathDuration && ./footpathDuration
         - `sources=0` indicates that the first coordinate in the coordinates string is the source
         - `destinations` specifies which of the subsequent coordinates are targets
     - **libcurl Usage**: Uses libcurl to `initialize`, `configure`, `perform HTTP requests` to OSRM, and `cleanup` resources
-    - **JSON Parsing**: Parses the JSON response (using nlohmann::json) and extracts walking durations, returning a vector of durations in seconds (-1.0 for unreachable destinations)
+    - **JSON Parsing**: Parses the JSON response (using `nlohmann::json`) and extracts walking durations, returning a vector of durations in seconds (-1.0 for unreachable destinations)
 
 - **Main Loop (Sequential Processing)** - `main()`:
     - Iterates through `allStops` to use each stop as a `sourceIndex`
@@ -102,7 +102,7 @@ g++ footpathDuration.cpp -lcurl -o footpathDuration && ./footpathDuration
 
 To compile `footpathDurationOMP.cpp` with OpenMP support, you'll need to include OpenMP flags. The exact flags may vary slightly depending on your compiler and OS  
 
-`On macOS` (via Homebrew): 
+On macOS (via Homebrew): 
 
 ```bash
 brew install llvm libomp
@@ -247,6 +247,15 @@ redis-cli KEYS "*5697*"
 
 # Check if Redis is running
 redis-cli ping
+
+# Delete a specific key
+redis-cli DEL "5697:BAR2"
+
+# Remove all keys from the current database
+redis-cli FLUSHDB
+
+# Stop the Redis server
+redis-cli shutdown
 ```
 
 ## Footpath Distance Calculation: `footpathDistance.cpp`

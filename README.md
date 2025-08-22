@@ -281,7 +281,7 @@ This project uses [OSRM](https://project-osrm.org) running in `Docker` and acces
 - **Route** - Finds the fastest route between coordinates
 - **Table** - Computes the duration or distances of the fastest route between all pairs of supplied coordinates
 
-To quickly try OSRM, you can use their [demo server](https://map.project-osrm.org) which comes with both the backend and a frontend on top.
+To quickly try OSRM, you can use their [demo server](https://map.project-osrm.org) which comes with both the backend and a frontend on top. If you notice that the routes or travel times from your local OSRM server are different, this is expected. The demo server uses different profiles (weightings) to the default osrm-backend ones.
 
 ### Using Docker
 
@@ -291,13 +291,13 @@ Download OpenStreetMap extracts for example from [Geofabrik](https://download.ge
 wget http://download.geofabrik.de/europe/portugal-latest.osm.pbf
 ```
 
-Pre-process the extract with the `foot profile` and start a routing engine HTTP server on port 5000
+Pre-process the extract with the **`foot profile`** and start a routing engine HTTP server on port 5000
 
 ```bash
 docker run -t -v "${PWD}:/data" ghcr.io/project-osrm/osrm-backend osrm-extract -p /opt/foot.lua /data/portugal-latest.osm.pbf || echo "osrm-extract failed"
 ```
 
-The flag `-v "${PWD}:/data"` creates the directory `/data` inside the docker container and makes the current working directory `"${PWD}"` available there. The file `/data/portugal-latest.osm.pbf` inside the container is referring to `"${PWD}/portugal-latest.osm.pbf"` on the host. Noting that this process can take a `long time to complete` with little changes on the terminal output, for example, a Portugal OSM file of 359MB took around 8 minutes to finish extraction and generate edge-expanded graph representation. You may need to `increase Docker resource allocation`.
+The flag `-v "${PWD}:/data"` creates the directory `/data` inside the docker container and makes the current working directory `"${PWD}"` available there. The file `/data/portugal-latest.osm.pbf` inside the container is referring to `"${PWD}/portugal-latest.osm.pbf"` on the host. Noting that this process can take a **long time to complete** with little changes on the terminal output, for example, a Portugal OSM file of 359MB took around 8 minutes to finish extraction and generate edge-expanded graph representation. You may need to **increase Docker resource allocation**.
 
 ```bash
 docker run -t -v "${PWD}:/data" ghcr.io/project-osrm/osrm-backend osrm-partition /data/portugal-latest.osrm || echo "osrm-partition failed"
